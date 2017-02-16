@@ -24,37 +24,16 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
                                autoescape = True)
 
-class FrontPage(webapp2.RequestHandler):
-    def get(self):
-        self.response.write("Hello, LC101 Members!")
-
 class Post (db.Model):
     title=db.StringProperty(required=True)
     post=db.TextProperty(required=True)
     created=db.DateTimeProperty(auto_now_add=True)
 
-class NewPost(webapp2.RequestHandler):
+class FrontPage(webapp2.RequestHandler):
     def get(self):
-        t=jinja_env.get_template("newpost.html")
-        title=self.request.get("title")
-        post=self.request.get("post")
-        error = self.request.get("error")
-
-        content = t.render(title=title,post=post,error=error)
+        t=jinja_env.get_template("base.html")
+        content=t.render()
         self.response.write(content)
-
-    def post(self):
-        title=self.request.get("title")
-        post=self.request.get("post")
-
-        if title and post:
-            a=Post(title=title, post=post)
-            a.put()
-            self.redirect("/blog")
-            self.response.write("it workds")
-        else:
-            error="We need both a title and a body!"
-            self.response.write(title, post, error=error)
 
 
 class MainPage(webapp2.RequestHandler):
@@ -64,9 +43,58 @@ class MainPage(webapp2.RequestHandler):
         content=t.render(posts=posts)
         self.response.write(content)
 
+class NewPostHandler(webapp2.RequestHandler):
+    def render_form(self, title="", body="", error=""):
+        t = jinja_env.get_template("newpost.html")
+        content= t.render(title=title, body=body, error=error)
+        self.response.write(content)
+
+    def get(self):
+        self.render_form()
+    # def get(self):
+    #     t=jinja_env.get_template("newpost.html")
+    #     title=self.request.get("title")
+    #     post=self.request.get("post")
+    #     error = self.request.get("error")
+    #
+    #     content = t.render(title=title,post=post,error=error)
+    #     self.response.write(content)
+
+    def post(self):
+        title=self.request.get("title")
+        body=self.request.get("body")
+
+        if title and post:
+            a=Post(title=title, body=body)
+            a.put()
+
+            id = post.key().id()
+            self.redirect("/blog/%s" % id)
+
+        else:
+            error = "we need both a title and a body!"
+            self.render_form(title, body, error)
+
+class ViewPostHandler(webapp2.RequestHandler):
+
+    def get(self, id):
+        """ Render a page with post determined by the id (via the URL/permalink) """
+
+        post = Post.get_by_id(int(id))
+        if post:
+            t = jinja_env.get_template("post.html")
+            content= t.render(post=post)
+        else:
+            error = "there is no post with id %s" % id
+            t = jinja_env.get_template("404error.html")
+            content= t.render(error=error)
+
+        self.response.write(content)
+
 
 app = webapp2.WSGIApplication([
     ('/',FrontPage),
-    ('/blog', MainPage),
-    ('/blog/newpost', NewPost)
+    ('/blog',MainPage),
+    ('/blog/newpost',NewPostHandler),
+    webapp2.Route('/blog/<id:\d+>', ViewPostHandler)
 ], debug=True)
