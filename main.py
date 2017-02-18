@@ -18,6 +18,7 @@ import os
 import webapp2
 import jinja2
 
+
 from google.appengine.ext import db
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -26,7 +27,7 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
 
 class Post (db.Model):
     title=db.StringProperty(required=True)
-    post=db.TextProperty(required=True)
+    body=db.TextProperty(required=True)
     created=db.DateTimeProperty(auto_now_add=True)
 
 class FrontPage(webapp2.RequestHandler):
@@ -51,28 +52,20 @@ class NewPostHandler(webapp2.RequestHandler):
 
     def get(self):
         self.render_form()
-    # def get(self):
-    #     t=jinja_env.get_template("newpost.html")
-    #     title=self.request.get("title")
-    #     post=self.request.get("post")
-    #     error = self.request.get("error")
-    #
-    #     content = t.render(title=title,post=post,error=error)
-    #     self.response.write(content)
 
     def post(self):
         title=self.request.get("title")
         body=self.request.get("body")
 
-        if title and post:
-            a=Post(title=title, body=body)
-            a.put()
+        if title and body:
+            post=Post(title=title, body=body)
+            post.put()
 
             id = post.key().id()
             self.redirect("/blog/%s" % id)
 
         else:
-            error = "we need both a title and a body!"
+            error = "Both a title and a body, please!"
             self.render_form(title, body, error)
 
 class ViewPostHandler(webapp2.RequestHandler):
@@ -85,7 +78,7 @@ class ViewPostHandler(webapp2.RequestHandler):
             t = jinja_env.get_template("post.html")
             content= t.render(post=post)
         else:
-            error = "there is no post with id %s" % id
+            error = "There is no post with id %s!" % id
             t = jinja_env.get_template("404error.html")
             content= t.render(error=error)
 
